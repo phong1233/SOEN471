@@ -42,5 +42,5 @@ Once we have used both methods to compute our predictions, we will be able to co
 
 | Name                   | Github                                                |
 |------------------------|-------------------------------------------------------|
-| Phong Le               | (phong1233)[https://github.com/phong1233]             |
-| Sébastien Blain-Nadeau | (sebastien-blain)[https://github.com/sebastien-blain] |
+| Phong Le               | [phong1233](https://github.com/phong1233)             |
+| Sébastien Blain-Nadeau | [sebastien-blain](https://github.com/sebastien-blain) |
