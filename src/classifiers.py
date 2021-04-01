@@ -93,7 +93,6 @@ def decision_tree_classifier():
     dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
     dtModel = dt.fit(train)
     predictions = dtModel.transform(test)
-    predictions.show(30)
 
     evaluate_predictions(predictions)
 
@@ -105,7 +104,6 @@ def random_forest_classifier():
     rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
     rfModel = rf.fit(train)
     predictions = rfModel.transform(test)
-    predictions.show(30)
 
     evaluate_predictions(predictions)
 
@@ -117,7 +115,6 @@ def gradient_boosted_tree_classifier():
     gb = GBTClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5)
     gbModel = gb.fit(train)
     predictions = gbModel.transform(test)
-    predictions.show(30)
 
     evaluate_predictions(predictions)
 
@@ -126,19 +123,18 @@ def multi_layer_perception_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    train.show()
-    temp = train.take(1)
-
     layers = [196, 3, 4, 2]
 
     mlp = MultilayerPerceptronClassifier(labelCol='label', featuresCol='features', maxIter=100, layers=layers, blockSize=128)
     mlpModel = mlp.fit(train)
     predictions = mlpModel.transform(test)
-    predictions.show()
+
     evaluate_predictions(predictions)
 
 
 def evaluate_predictions(predictions):
+    predictions.show()
+
     evaluator = BinaryClassificationEvaluator()
     print('Test Area Under ROC', evaluator.evaluate(predictions))
 
