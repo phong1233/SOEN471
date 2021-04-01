@@ -4,7 +4,7 @@ from pyspark.sql.functions import datediff
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, DateType
 
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier, GBTClassifier
+from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier, GBTClassifier, MultilayerPerceptronClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 
@@ -122,6 +122,22 @@ def gradient_boosted_tree_classifier():
     evaluate_predictions(predictions)
 
 
+def multi_layer_perception_classifier():
+    df = data_preparation()
+    train, test = df.randomSplit([0.7, 0.3])
+
+    train.show()
+    temp = train.take(1)
+
+    layers = [196, 3, 4, 2]
+
+    mlp = MultilayerPerceptronClassifier(labelCol='label', featuresCol='features', maxIter=100, layers=layers, blockSize=128)
+    mlpModel = mlp.fit(train)
+    predictions = mlpModel.transform(test)
+    predictions.show()
+    evaluate_predictions(predictions)
+
+
 def evaluate_predictions(predictions):
     evaluator = BinaryClassificationEvaluator()
     print('Test Area Under ROC', evaluator.evaluate(predictions))
@@ -133,4 +149,4 @@ def evaluate_predictions(predictions):
 
 
 def start():
-    gradient_boosted_tree_classifier()
+    multi_layer_perception_classifier()
