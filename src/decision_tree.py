@@ -8,6 +8,7 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 
+
 def init_spark():
     spark = SparkSession \
         .builder \
@@ -82,37 +83,42 @@ def data_preparation():
     selectedCols = ['label', 'features'] + cols
     df = df.select(selectedCols)
 
-    df.show()
-
     return df
+
 
 def decision_tree_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=4, impurity="gini")
+    dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
     dtModel = dt.fit(train)
     predictions = dtModel.transform(test)
     predictions.show(30)
 
-    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction",metricName="accuracy")
-    accuracy = evaluator.evaluate(predictions)
-    print("Test Error = %g " % (1.0 - accuracy))
-    print("Accuracy = %g " % accuracy)
+    evaluate_predictions(predictions)
+
 
 def random_forest_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
+    rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
     rfModel = rf.fit(train)
     predictions = rfModel.transform(test)
     predictions.show(30)
 
-    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction",metricName="accuracy")
+    evaluate_predictions(predictions)
+
+
+def evaluate_predictions(predictions):
+    evaluator = BinaryClassificationEvaluator()
+    print('Test Area Under ROC', evaluator.evaluate(predictions))
+
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
     accuracy = evaluator.evaluate(predictions)
     print("Test Error = %g " % (1.0 - accuracy))
     print("Accuracy = %g " % accuracy)
 
+
 def start():
-    decision_tree_classifier()
+    random_forest_classifier()
