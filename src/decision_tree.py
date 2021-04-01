@@ -4,8 +4,8 @@ from pyspark.sql.functions import datediff
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, DateType
 
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import DecisionTreeClassifier
-from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
+from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 
 def init_spark():
@@ -57,10 +57,10 @@ def get_clean_data():
     return cleaned
 
 
-def decision_tree_classifier():
+def data_preparation():
     df = get_clean_data()
     cols = df.columns
-    categoricalColumns = ['category', 'main_category', 'state', 'country']
+    categoricalColumns = ['category', 'main_category', 'country']
     stages = []
     
     for categoricalCol in categoricalColumns:
@@ -84,22 +84,35 @@ def decision_tree_classifier():
 
     df.show()
 
-    train, test = df.randomSplit([0.05, 0.95])
-    print(train.count())
-    print(test.count())
+    return df
+
+def decision_tree_classifier():
+    df = data_preparation()
+    train, test = df.randomSplit([0.7, 0.3])
 
     dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=4, impurity="gini")
     dtModel = dt.fit(train)
     predictions = dtModel.transform(test)
-    predictions = predictions.filter(df.category != 'Product Design')
-    predictions = predictions.filter(df.label == 1.0)
     predictions.show(30)
 
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction",metricName="accuracy")
+    accuracy = evaluator.evaluate(predictions)
+    print("Test Error = %g " % (1.0 - accuracy))
+    print("Accuracy = %g " % accuracy)
 
-    evaluator = BinaryClassificationEvaluator()
-    print("Test Area Under ROC: " + str(evaluator.evaluate(predictions, {evaluator.metricName: "areaUnderROC"})))
-    return
+def random_forest_classifier():
+    df = data_preparation()
+    train, test = df.randomSplit([0.7, 0.3])
 
+    rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
+    rfModel = rf.fit(train)
+    predictions = rfModel.transform(test)
+    predictions.show(30)
+
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction",metricName="accuracy")
+    accuracy = evaluator.evaluate(predictions)
+    print("Test Error = %g " % (1.0 - accuracy))
+    print("Accuracy = %g " % accuracy)
 
 def start():
     decision_tree_classifier()
