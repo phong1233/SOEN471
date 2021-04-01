@@ -1,10 +1,12 @@
 import pyspark
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import datediff
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, DateType
-from pyspark.mllib.tree import DecisionTree, DecisionTreeModel
-from pyspark.mllib.util import MLUtils
-from pyspark.ml.feature import OneHotEncoder, StringIndexer
 
+from pyspark.ml import Pipeline
+from pyspark.ml.classification import DecisionTreeClassifier
+from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 
 def init_spark():
     spark = SparkSession \
@@ -43,18 +45,59 @@ def get_data_as_dataframe():
 
 
 def get_clean_data():
+    columns_to_drop = ['usd_pledged_real', 'usd pledged', 'backers', 'pledged', 'goal', 'currency', 'deadline', 'launched']
+    
     df = get_data_as_dataframe()
-    cleaned = df.filter((df.state == 'successful') | (df.state == 'failed'))
+    cleaned = df.filter((df.state == 'successful') | (df.state == 'failed')) \
+                .withColumn('duration_in_days',  datediff(df['deadline'], df['launched'])) \
+                .drop(*columns_to_drop)
+
+    cleaned.show()
+
     return cleaned
 
 
 def decision_tree_classifier():
-    data = get_clean_data()
-
-    # (training, test) = data.randomSplit([0.8, 0.2])
+    df = get_clean_data()
+    cols = df.columns
+    categoricalColumns = ['category', 'main_category', 'state', 'country']
+    stages = []
     
-    # model = DecisionTree.trainClassifier(training, numClasses=2, categoricalFeaturesInfo={},
-    #                                  impurity='gini', maxDepth=5, maxBins=32)
+    for categoricalCol in categoricalColumns:
+        stringIndexer = StringIndexer(inputCol = categoricalCol, outputCol = categoricalCol + 'Index')
+        encoder = OneHotEncoder(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
+        stages += [stringIndexer, encoder]
+
+    label_stringIdx = StringIndexer(inputCol = 'state', outputCol = 'label')
+    stages += [label_stringIdx]
+
+    numericCols = ['usd_goal_real', 'duration_in_days']
+    assemblerInputs = [c + "classVec" for c in categoricalColumns] + numericCols
+    assembler = VectorAssembler(inputCols=assemblerInputs, outputCol="features")
+    stages += [assembler]
+
+    pipeline = Pipeline(stages = stages)
+    pipelineModel = pipeline.fit(df)
+    df = pipelineModel.transform(df)
+    selectedCols = ['label', 'features'] + cols
+    df = df.select(selectedCols)
+
+    df.show()
+
+    train, test = df.randomSplit([0.05, 0.95])
+    print(train.count())
+    print(test.count())
+
+    dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=4, impurity="gini")
+    dtModel = dt.fit(train)
+    predictions = dtModel.transform(test)
+    predictions = predictions.filter(df.category != 'Product Design')
+    predictions = predictions.filter(df.label == 1.0)
+    predictions.show(30)
+
+
+    evaluator = BinaryClassificationEvaluator()
+    print("Test Area Under ROC: " + str(evaluator.evaluate(predictions, {evaluator.metricName: "areaUnderROC"})))
     return
 
 
