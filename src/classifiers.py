@@ -4,9 +4,11 @@ from pyspark.sql.functions import datediff
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, DateType
 
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier, GBTClassifier, MultilayerPerceptronClassifier
+from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier, GBTClassifier, \
+    MultilayerPerceptronClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 
 
 def init_spark():
@@ -20,21 +22,21 @@ def init_spark():
 
 def get_data_as_dataframe():
     schema = StructType([StructField("ID", IntegerType(), True),
-                     StructField("name", StringType(), True), 
-                     StructField("category", StringType(),True), 
-                     StructField("main_category", StringType(),True),
-                     StructField("currency", StringType(), True),
-                     StructField("deadline", DateType(), True),
-                     StructField("goal", IntegerType(), True), 
-                     StructField("launched", DateType(), True), 
-                     StructField("pledged", DoubleType(), True), 
-                     StructField("state", StringType(), True),
-                     StructField("backers", IntegerType(), True),
-                     StructField("country", StringType(), True),
-                     StructField("usd pledged", DoubleType(), True),
-                     StructField("usd_pledged_real", DoubleType(), True),
-                     StructField("usd_goal_real", DoubleType(), True)])
-    
+                         StructField("name", StringType(), True),
+                         StructField("category", StringType(), True),
+                         StructField("main_category", StringType(), True),
+                         StructField("currency", StringType(), True),
+                         StructField("deadline", DateType(), True),
+                         StructField("goal", IntegerType(), True),
+                         StructField("launched", DateType(), True),
+                         StructField("pledged", DoubleType(), True),
+                         StructField("state", StringType(), True),
+                         StructField("backers", IntegerType(), True),
+                         StructField("country", StringType(), True),
+                         StructField("usd pledged", DoubleType(), True),
+                         StructField("usd_pledged_real", DoubleType(), True),
+                         StructField("usd_goal_real", DoubleType(), True)])
+
     spark = init_spark()
     df = spark.read.format("csv") \
         .option("header", True) \
@@ -46,12 +48,13 @@ def get_data_as_dataframe():
 
 
 def get_clean_data():
-    columns_to_drop = ['usd_pledged_real', 'usd pledged', 'backers', 'pledged', 'goal', 'currency', 'deadline', 'launched']
-    
+    columns_to_drop = ['usd_pledged_real', 'usd pledged', 'backers', 'pledged', 'goal', 'currency', 'deadline',
+                       'launched']
+
     df = get_data_as_dataframe()
     cleaned = df.filter((df.state == 'successful') | (df.state == 'failed')) \
-                .withColumn('duration_in_days',  datediff(df['deadline'], df['launched'])) \
-                .drop(*columns_to_drop)
+        .withColumn('duration_in_days', datediff(df['deadline'], df['launched'])) \
+        .drop(*columns_to_drop)
 
     cleaned.show()
 
@@ -63,13 +66,13 @@ def data_preparation():
     cols = df.columns
     categoricalColumns = ['category', 'main_category', 'country']
     stages = []
-    
+
     for categoricalCol in categoricalColumns:
-        stringIndexer = StringIndexer(inputCol = categoricalCol, outputCol = categoricalCol + 'Index')
+        stringIndexer = StringIndexer(inputCol=categoricalCol, outputCol=categoricalCol + 'Index')
         encoder = OneHotEncoder(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
         stages += [stringIndexer, encoder]
 
-    label_stringIdx = StringIndexer(inputCol = 'state', outputCol = 'label')
+    label_stringIdx = StringIndexer(inputCol='state', outputCol='label')
     stages += [label_stringIdx]
 
     numericCols = ['usd_goal_real', 'duration_in_days']
@@ -77,7 +80,7 @@ def data_preparation():
     assembler = VectorAssembler(inputCols=assemblerInputs, outputCol="features")
     stages += [assembler]
 
-    pipeline = Pipeline(stages = stages)
+    pipeline = Pipeline(stages=stages)
     pipelineModel = pipeline.fit(df)
     df = pipelineModel.transform(df)
     selectedCols = ['label', 'features'] + cols
@@ -90,7 +93,7 @@ def decision_tree_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
+    dt = DecisionTreeClassifier(featuresCol='features', labelCol='label', maxDepth=5, impurity="gini")
     dtModel = dt.fit(train)
     predictions = dtModel.transform(test)
 
@@ -101,7 +104,7 @@ def random_forest_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5, impurity="gini")
+    rf = RandomForestClassifier(featuresCol='features', labelCol='label', maxDepth=5, impurity="gini")
     rfModel = rf.fit(train)
     predictions = rfModel.transform(test)
 
@@ -112,9 +115,29 @@ def gradient_boosted_tree_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3])
 
-    gb = GBTClassifier(featuresCol = 'features', labelCol = 'label', maxDepth=5)
+    gb = GBTClassifier(featuresCol='features', labelCol='label', maxDepth=5)
     gbModel = gb.fit(train)
     predictions = gbModel.transform(test)
+
+    evaluate_predictions(predictions)
+
+
+def gradient_boosted_tree_classifier_with_cross_validation():
+    df = data_preparation()
+
+    train, test = df.randomSplit([0.7, 0.3])
+
+    gbt = GBTClassifier()
+    evaluator = BinaryClassificationEvaluator()
+
+    paramGrid = (ParamGridBuilder()
+                 .addGrid(gbt.maxDepth, [2, 5, 10])
+                 .addGrid(gbt.maxIter, [5, 100])
+                 .build())
+    cv = CrossValidator(estimator=gbt, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=5)
+
+    cvModel = cv.fit(train)
+    predictions = cvModel.transform(test)
 
     evaluate_predictions(predictions)
 
@@ -125,7 +148,8 @@ def multi_layer_perception_classifier():
 
     layers = [196, 3, 4, 2]
 
-    mlp = MultilayerPerceptronClassifier(labelCol='label', featuresCol='features', maxIter=100, layers=layers, blockSize=128)
+    mlp = MultilayerPerceptronClassifier(labelCol='label', featuresCol='features', maxIter=100, layers=layers,
+                                         blockSize=128)
     mlpModel = mlp.fit(train)
     predictions = mlpModel.transform(test)
 
@@ -145,4 +169,4 @@ def evaluate_predictions(predictions):
 
 
 def start():
-    multi_layer_perception_classifier()
+    gradient_boosted_tree_classifier_with_cross_validation()
