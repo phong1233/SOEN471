@@ -1,4 +1,5 @@
 from classifiers import start
-
+from dataset_analysis import dataset_analysis
 if __name__ == "__main__":
-    start()
+    dataset_analysis()
+    #start()
