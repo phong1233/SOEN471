@@ -4,7 +4,10 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClass
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 
 from data_preparation import data_preparation
-
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import itertools
 
 SEED = 40099004
 
@@ -18,7 +21,7 @@ def decision_tree_classifier():
     predictions = dtModel.transform(test)
 
     evaluate_predictions(predictions)
-
+    print_confusion_matrix(predictions)
     return predictions, dtModel
 
 
@@ -31,7 +34,7 @@ def random_forest_classifier():
     predictions = rfModel.transform(test)
 
     evaluate_predictions(predictions)
-
+    print_confusion_matrix(predictions)
     return predictions, rfModel
 
 
@@ -44,7 +47,7 @@ def gradient_boosted_tree_classifier():
     predictions = gbModel.transform(test)
 
     evaluate_predictions(predictions)
-
+    print_confusion_matrix(predictions)
     return predictions, gbModel
 
 
@@ -66,7 +69,7 @@ def gradient_boosted_tree_classifier_with_cross_validation():
     predictions = cvModel.transform(test)
 
     evaluate_predictions(predictions)
-
+    print_confusion_matrix(predictions)
     return predictions, cvModel
 
 
@@ -82,8 +85,26 @@ def multi_layer_perception_classifier():
     predictions = mlpModel.transform(test)
 
     evaluate_predictions(predictions)
-
+    print_confusion_matrix(predictions)
     return predictions, mlpModel
+
+
+def print_confusion_matrix(predictions):
+    y_actu = pd.Series([i[0] for i in predictions.select('label').collect()], name='Actual')
+    y_pred = pd.Series([i[0] for i in predictions.select('prediction').collect()], name='Predicted')
+    df_confusion = pd.crosstab(y_actu, y_pred, rownames=['Actual'], colnames=['Predicted'])
+    plt.matshow(df_confusion, cmap=plt.cm.OrRd) # imshow
+    plt.colorbar()
+    plt.tight_layout()
+    tick_marks = np.arange(len(df_confusion.columns))
+    plt.xticks(tick_marks, ['failed', 'successful'], rotation=45)
+    plt.yticks(tick_marks, ['failed', 'successful'])
+    plt.ylabel(df_confusion.index.name)
+    plt.xlabel(df_confusion.columns.name)
+    for i, j in itertools.product(range(df_confusion.shape[0]), range(df_confusion.shape[1])):
+        plt.text(i, j, "{:,}".format(df_confusion[i][j]), horizontalalignment="center", color="black")
+    plt.savefig('multilayer_perceptron.png', bbox_inches='tight')
+    plt.show()
 
 
 def evaluate_predictions(predictions):
@@ -100,4 +121,4 @@ def evaluate_predictions(predictions):
 
 
 def start():
-    return decision_tree_classifier()
+    return multi_layer_perception_classifier()

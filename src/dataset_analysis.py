@@ -55,3 +55,16 @@ def dataset_analysis():
     ax.set_ylabel('Num of projects')
     ax.set_title('Top 25 categories')
     plt.show()
+
+
+def print_class_balance():
+    df = get_clean_data()
+
+    success = df.filter(df.state == 'successful').count()
+    failed = df.filter(df.state == 'failed').count()
+
+    y = np.array([success, failed])
+    plt.title('Class balance')
+    plt.pie(y, labels=['Successful {0:.2f}%'.format(success/df.count() * 100), 'Failed {0:.2f}%'.format(failed/df.count() * 100)])
+    plt.savefig('class_balance.png', bbox_inches='tight')
+    plt.show()

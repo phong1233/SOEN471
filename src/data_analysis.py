@@ -9,4 +9,3 @@ def print_features_importance(featureImp, dataset, featuresCol):
     varlist['score'] = varlist['idx'].apply(lambda x: featureImp[x])
     print(varlist.sort_values('score', ascending=False).head(10))
 
-
