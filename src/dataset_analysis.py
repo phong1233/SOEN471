@@ -64,7 +64,7 @@ def print_class_balance():
     failed = df.filter(df.state == 'failed').count()
 
     y = np.array([success, failed])
-    plt.title('Class balance')
+    plt.title('Class frequencies')
     plt.pie(y, labels=['Successful {0:.2f}%'.format(success/df.count() * 100), 'Failed {0:.2f}%'.format(failed/df.count() * 100)])
-    plt.savefig('class_balance.png', bbox_inches='tight')
+    plt.savefig('class_frequencies.png', bbox_inches='tight')
     plt.show()
