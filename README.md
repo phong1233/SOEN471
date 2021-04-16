@@ -27,8 +27,29 @@
     <li>
       <a href="#materials-and-methods">Materials and Methods</a>
       <ul>
-        <li><a href="#dataset">Dataset</a></li>
+        <li>
+          <a href="#dataset">Dataset</a>
+          <ul>
+            <li><a href="#adjustments-to-the-dataset">Adjustments to the dataset</a></li>
+            <li><a href="#dataset-analysis">Dataset Analysis</a></li>
+            <li><a href="#data-preprocessing">Data preprocessing</a></li>
+          </ul>
+        </li>
         <li><a href="#methods">Methods</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#results">Results</a>
+      <ul>
+        <li><a href="#analysis">Analysis</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#discussion">Discussion</a>
+      <ul>
+        <li><a href="#relevance-of-solutions">Relevance of solutions</a></li>
+        <li><a href="#limitations">Limitations</a></li>
+        <li><a href="#future-work">Future work</a></li>
       </ul>
     </li>
     <li><a href="#contributors">Contributors</a></li>
