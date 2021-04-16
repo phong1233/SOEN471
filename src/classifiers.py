@@ -77,7 +77,7 @@ def multi_layer_perception_classifier():
     df = data_preparation()
     train, test = df.randomSplit([0.7, 0.3], seed=SEED)
 
-    layers = [196, 3, 4, 2]
+    layers = [196, 32, 32, 32, 2]
 
     mlp = MultilayerPerceptronClassifier(labelCol='label', featuresCol='features', maxIter=100, layers=layers,
                                          blockSize=128, seed=SEED)
